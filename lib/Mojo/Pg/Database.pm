@@ -2,13 +2,15 @@ package Mojo::Pg::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp qw(croak shortmess);
-use DBD::Pg qw(:async);
+use DBD::Pg qw(:async :pg_types);
 use Mojo::IOLoop;
 use Mojo::JSON qw(to_json);
 use Mojo::Pg::Results;
 use Mojo::Pg::Transaction;
 use Mojo::Promise;
 use Mojo::Util qw(monkey_patch);
+
+use constant CORE_BOOL => defined &builtin::is_bool;
 
 has 'dbh';
 has pg => undef, weak => 1;
@@ -94,6 +96,9 @@ sub query {
       elsif (exists $param->{type} && exists $param->{value}) {
         ($attrs->{pg_type}, $param) = @{$param}{qw(type value)};
       }
+    } elsif (state $CORE_BOOL = CORE_BOOL) {
+      BEGIN { warnings->unimport('experimental::builtin') if CORE_BOOL }
+      ($attrs->{pg_type}, $param) = (PG_BOOL, int $param) if builtin::is_bool $param;
     }
     $sth->bind_param($i + 1, $param, $attrs);
   }
