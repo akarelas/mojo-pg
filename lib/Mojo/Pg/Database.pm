@@ -177,7 +177,7 @@ sub _watch {
 
       return $self->_unwatch if !$self->_notifications && !$self->{waiting};
 
-      return if !$self->{waiting} || !$dbh->pg_ready;
+      return if !$self->{waiting} || !do { local $dbh->{RaiseError} = 0; $dbh->pg_ready };
       my ($sth, $cb) = @{delete $self->{waiting}}{qw(sth cb)};
 
       # Do not raise exceptions inside the event loop
